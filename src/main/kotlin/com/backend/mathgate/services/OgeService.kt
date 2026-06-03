@@ -8,7 +8,9 @@ import com.backend.mathgate.entities.QuestionEntity
 import com.backend.mathgate.repositories.BlockRepository
 import com.backend.mathgate.repositories.QuestionRepository
 import jakarta.transaction.Transactional
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.web.server.ResponseStatusException
 
 @Service
 class OgeService(
@@ -17,8 +19,13 @@ class OgeService(
 ) {
 
     @Transactional
-    fun getQuestion(): QuestionDto? {
-        val randomQuestion = questionRepository.findRandomQuestion() ?: return null
+    fun getQuestion(): QuestionDto {
+        val randomQuestion = questionRepository.findRandomQuestion()
+
+        if (randomQuestion == null) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND, "Вопросы не найдены")
+        }
+
         val blocksFinal = blockRepository
             .findAllByQuestion(randomQuestion.id)
             .map {
@@ -55,7 +62,7 @@ class OgeService(
             return "Success"
 
         } catch (e: Exception) {
-            return e.message ?: "Error"
+            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.message)
         }
     }
 }

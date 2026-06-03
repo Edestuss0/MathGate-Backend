@@ -16,7 +16,7 @@ class OgeController(
     private val service: OgeService
 ) {
     @GetMapping
-    fun getOge(): QuestionDto? {
+    fun getOge(): QuestionDto {
         return service.getQuestion()
     }
 
