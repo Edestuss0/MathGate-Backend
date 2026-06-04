@@ -1,10 +1,13 @@
 package com.backend.mathgate.controller
 
 import com.backend.mathgate.dto.AddQuestionDto
+import com.backend.mathgate.dto.PostResponse
 import com.backend.mathgate.dto.QuestionDto
 import com.backend.mathgate.services.OgeService
 import jakarta.validation.Valid
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -21,7 +24,12 @@ class OgeController(
     }
 
     @PostMapping("add")
-    fun addQuestion(@Valid @RequestBody question: AddQuestionDto): String {
+    fun addQuestion(@Valid @RequestBody question: AddQuestionDto): PostResponse {
         return service.create(question)
+    }
+
+    @DeleteMapping("delete/{id}")
+    fun deleteQuestion(@PathVariable id: Int): PostResponse {
+        return service.deleteById(id)
     }
 }

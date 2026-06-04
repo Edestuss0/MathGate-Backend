@@ -2,6 +2,7 @@ package com.backend.mathgate.services
 
 import com.backend.mathgate.dto.AddQuestionDto
 import com.backend.mathgate.dto.BlockDto
+import com.backend.mathgate.dto.PostResponse
 import com.backend.mathgate.dto.QuestionDto
 import com.backend.mathgate.entities.BlockEntity
 import com.backend.mathgate.entities.QuestionEntity
@@ -39,7 +40,7 @@ class OgeService(
         )
     }
     @Transactional
-    fun create(dto: AddQuestionDto): String {
+    fun create(dto: AddQuestionDto): PostResponse {
         try {
             questionRepository.save(
                 QuestionEntity(
@@ -59,10 +60,21 @@ class OgeService(
                 )
             }
 
-            return "Success"
+            return PostResponse("Вопрос из ОГЭ успешно добавлен")
 
         } catch (e: Exception) {
-            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.message)
+            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.message ?: "Неизвестная ошибка")
+        }
+    }
+
+    @Transactional
+    fun deleteById(id: Int): PostResponse {
+        try {
+            questionRepository.deleteById(id)
+            blockRepository.deleteAllByQuestion(id)
+            return PostResponse("Вопрос успешно удалён")
+        } catch (_: Exception) {
+            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Не удалось удалить вопрос")
         }
     }
 }
