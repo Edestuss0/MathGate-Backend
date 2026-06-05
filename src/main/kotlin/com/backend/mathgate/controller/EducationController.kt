@@ -2,11 +2,13 @@ package com.backend.mathgate.controller
 
 import com.backend.mathgate.dto.AddLessonDto
 import com.backend.mathgate.dto.AddThemeDto
+import com.backend.mathgate.dto.LessonResponseDto
+import com.backend.mathgate.dto.LessonsByPageResponseDto
 import com.backend.mathgate.dto.PostResponse
-import com.backend.mathgate.entities.LessonEntity
 import com.backend.mathgate.entities.ThemeEntity
 import com.backend.mathgate.services.EducationService
 import jakarta.validation.Valid
+import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
+@CrossOrigin(origins = ["http://localhost:5173"])
 @RestController
 @RequestMapping("/api/education")
 class EducationController(
@@ -40,9 +43,14 @@ class EducationController(
         return educationService.deleteThemeById(id)
     }
 
-    @GetMapping("lessons/{id}")
-    fun getLesson(@PathVariable id: Int): List<LessonEntity> {
+    @GetMapping("theme/{id}/lessons")
+    fun getLessonsByTheme(@PathVariable id: Int): List<LessonsByPageResponseDto> {
         return educationService.getLessonByTheme(id)
+    }
+
+    @GetMapping("lesson/{id}")
+    fun getLessonById(@PathVariable id: Int): LessonResponseDto {
+        return educationService.getLessonById(id)
     }
 
     @PostMapping("lesson/add")

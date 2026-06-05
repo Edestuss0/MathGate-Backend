@@ -11,18 +11,16 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 
 @Entity
-@Table(name = "lessons")
-data class LessonEntity(
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Table(name = "lesson_pages")
+data class LessonPageEntity(
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Int? = null,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "theme_id", nullable = false)
-    val theme: ThemeEntity,
-    @Column(nullable = false)
-    val name: String,
-    @Column(nullable = false)
-    val description: String,
+    @JoinColumn(nullable = false, name = "lesson_id")
+    val lesson: LessonEntity,
+
     @Column(name = "order_index", nullable = false)
     val orderIndex: Int,
 )

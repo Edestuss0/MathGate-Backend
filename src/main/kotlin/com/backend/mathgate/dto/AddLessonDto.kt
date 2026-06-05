@@ -7,4 +7,6 @@ data class AddLessonDto(
     @field:Min(0) val theme: Int,
     @field:NotBlank val name: String,
     @field:NotBlank val description: String,
+    @field:Min(0) val orderIndex: Int,
+    val pages: List<AddLessonPageDto>,
 )
