@@ -27,6 +27,8 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
 
 @Service
 class EducationService(
@@ -35,6 +37,7 @@ class EducationService(
     private val lessonPagesRepository: LessonPagesRepository,
     private val lessonBlocksRepository: LessonBlocksRepository,
     private val blockPayloadValidator: BlockPayloadValidator,
+    private val objectMapper: ObjectMapper,
     @Value("\${MODE:dev}") private val appMode: String
 ) {
     @Transactional
@@ -235,7 +238,7 @@ class EducationService(
                     id = block.id!!,
                     blockType = block.blockType,
                     orderIndex = block.orderIndex,
-                    payload = block.payload,
+                    payload = objectMapper.readTree(block.payload),
                 )
             }
 
