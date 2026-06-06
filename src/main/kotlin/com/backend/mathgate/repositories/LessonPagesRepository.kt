@@ -5,4 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface LessonPagesRepository : JpaRepository<LessonPageEntity, Int> {
     fun getAllByLessonId(lessonId: Int): List<LessonPageEntity>
+
+    fun deleteAllByLessonId(lessonId: Int)
+
+    fun findAllByLessonId(lessonId: Int): List<LessonPageEntity>
 }

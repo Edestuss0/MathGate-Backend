@@ -70,8 +70,8 @@ class OgeService(
     @Transactional
     fun deleteById(id: Int): PostResponse {
         try {
-            questionRepository.deleteById(id)
             blockRepository.deleteAllByQuestion(id)
+            questionRepository.deleteById(id)
             return PostResponse("Вопрос успешно удалён")
         } catch (_: Exception) {
             throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Не удалось удалить вопрос")

@@ -4,9 +4,7 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
 import tools.jackson.databind.JsonNode
 
-data class AddLessonBlockDto(
-    @field:Min(0)
-    val lessonPageId: Int,
+data class UpdateLessonBlockDto(
     @field:NotNull
     val blockType: LessonBlockType,
     @field:Min(1)
