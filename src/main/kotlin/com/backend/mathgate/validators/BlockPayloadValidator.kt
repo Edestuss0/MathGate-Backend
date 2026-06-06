@@ -20,9 +20,7 @@ class BlockPayloadValidator(
 ) {
     fun validate(payload: JsonNode, blockType: LessonBlockType): String {
         val dto = parsePayload(blockType, payload)
-
-        validator.validate(dto)
-
+        validateAnnotations(dto)
         validateBusinessRules(dto, blockType)
 
         return objectMapper.writeValueAsString(dto)
@@ -85,7 +83,6 @@ class BlockPayloadValidator(
         when (blockType) {
             LessonBlockType.CHOICE_QUESTION -> {
                 val choiceDto = dto as ChoiceQuestionPayloadType
-                validator.validate(choiceDto)
                 validateChoiceQuestion(choiceDto)
             }
 
@@ -97,6 +94,7 @@ class BlockPayloadValidator(
             else -> {}
         }
     }
+
 
     private fun validateSvg(
         dto: SvgPayloadType
@@ -124,6 +122,13 @@ class BlockPayloadValidator(
     private fun validateChoiceQuestion(
         dto: ChoiceQuestionPayloadType
     ) {
+
+        if (dto.answers.size - 1 < dto.correctAnswerIndex) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Некорректный правильный ответ"
+            )
+        }
 
         dto.answers.forEach {
 

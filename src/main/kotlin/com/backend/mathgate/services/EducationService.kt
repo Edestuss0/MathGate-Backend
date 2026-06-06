@@ -9,6 +9,7 @@ import com.backend.mathgate.dto.LessonPageResponseDto
 import com.backend.mathgate.dto.LessonResponseDto
 import com.backend.mathgate.dto.LessonsByPageResponseDto
 import com.backend.mathgate.dto.PostResponse
+import com.backend.mathgate.dto.ThemeResponseDto
 import com.backend.mathgate.dto.UpdateLessonBlockDto
 import com.backend.mathgate.dto.UpdateLessonDto
 import com.backend.mathgate.entities.LessonBlockEntity
@@ -20,12 +21,13 @@ import com.backend.mathgate.repositories.LessonPagesRepository
 import com.backend.mathgate.repositories.LessonsRepository
 import com.backend.mathgate.repositories.ThemeRepository
 import com.backend.mathgate.validators.BlockPayloadValidator
-import jakarta.transaction.Transactional
-import org.hibernate.query.Page.page
-import org.hibernate.sql.Update
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
+import org.springframework.cache.annotation.Caching
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
@@ -38,22 +40,28 @@ class EducationService(
     private val lessonBlocksRepository: LessonBlocksRepository,
     private val blockPayloadValidator: BlockPayloadValidator,
     private val objectMapper: ObjectMapper,
-    @Value("\${MODE:dev}") private val appMode: String
+    @Value("\${IS_PRODUCTION:false}") private val isProduction: Boolean
 ) {
-    @Transactional
-    fun getAllThemes(): List<ThemeEntity> {
+    @Transactional(readOnly = true)
+    @Cacheable(value = ["themes"])
+    fun getAllThemes(): List<ThemeResponseDto> {
         try {
-            val themes = themeRepository.findAll()
+            val themes = themeRepository.findAll().map { theme ->
+                ThemeResponseDto(id = theme.id!!, name = theme.name, grade = theme.grade)
+            }
             return themes
         } catch (_: Exception) {
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Не удалось найти темы")
         }
     }
 
-    @Transactional
-    fun getThemesByGrade(grade: Int): List<ThemeEntity> {
+    @Transactional(readOnly = true)
+    @Cacheable(value = ["themes"], key = "#grade")
+    fun getThemesByGrade(grade: Int): List<ThemeResponseDto> {
         try {
-            val themes = themeRepository.getByGrade(grade)
+            val themes = themeRepository.getByGrade(grade).map { theme ->
+                ThemeResponseDto(id = theme.id!!, name = theme.name, grade = theme.grade)
+            }
             return themes
         } catch (_: Exception) {
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Не удалось найти темы для ${grade} класса")
@@ -61,8 +69,9 @@ class EducationService(
     }
 
     @Transactional
+    @CacheEvict(value = ["themes"], allEntries = true)
     fun addTheme(dto: AddThemeDto): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         try {
@@ -79,91 +88,74 @@ class EducationService(
     }
 
     @Transactional
+    @Caching(evict = [
+        CacheEvict(value = ["themes"], allEntries = true),
+        CacheEvict(value = ["lessons"], allEntries = true),
+        CacheEvict(value = ["lessonsByTheme"], allEntries = true)
+    ])
     fun deleteThemeById(id: Int): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         themeRepository.findById(id).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Не удалось найти тему")
         }
-        try {
-            lessonsRepository.findAllByThemeId(id).forEach { lesson ->
-                lessonPagesRepository.getAllByLessonId(lesson.id!!).forEach { page ->
-                    lessonBlocksRepository.getAllByPageId(page.id!!).forEach { block ->
-                        lessonBlocksRepository.deleteById(block.id!!)
-                    }
-                    lessonPagesRepository.deleteById(page.id!!)
-                }
-                lessonsRepository.deleteById(lesson.id!!)
-            }
-            themeRepository.deleteById(id)
-            return PostResponse("Тема успешно удалена")
-        } catch (_: Exception) {
-            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Не удалось удалить тему")
-        }
+        themeRepository.deleteById(id)
+        return PostResponse("Тема успешно удалена")
     }
 
     @Transactional
+    @Caching(evict = [
+        CacheEvict(value = ["lessons"], allEntries = true),
+        CacheEvict(value = ["lessonsByTheme"], allEntries = true)
+    ])
     fun deleteLessonById(id: Int): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         lessonsRepository.findById(id).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Не удалось найти урок")
         }
-        try {
-            lessonPagesRepository.getAllByLessonId(id).forEach { page ->
-                lessonBlocksRepository.getAllByPageId(page.id!!).forEach { block ->
-                    lessonBlocksRepository.deleteById(block.id!!)
-                }
-                lessonPagesRepository.deleteById(page.id!!)
-            }
-            lessonsRepository.deleteById(id)
-            return PostResponse("Урок успешно удалён")
-        } catch (_: Exception) {
-            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Не удалось удалить урок")
-        }
-
+        lessonsRepository.deleteById(id)
+        return PostResponse("Урок успешно удалён")
     }
 
     @Transactional
+    @Caching(evict = [
+        CacheEvict(value = ["lessons"], allEntries = true),
+        CacheEvict(value = ["lessonsByTheme"], allEntries = true)
+    ])
     fun deletePageById(id: Int): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         lessonPagesRepository.findById(id).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Не удалось найти страницу")
         }
-        try {
-            lessonBlocksRepository.getAllByPageId(id).forEach { block ->
-                lessonBlocksRepository.deleteById(block.id!!)
-            }
-            lessonPagesRepository.deleteById(id)
-            return PostResponse("Страница успешно удалена")
-        } catch (_: Exception) {
-            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Не удалось удалить страницу")
-        }
+        lessonPagesRepository.deleteById(id)
+        return PostResponse("Страница успешно удалена")
     }
 
     @Transactional
+    @Caching(evict = [
+        CacheEvict(value = ["lessons"], allEntries = true),
+        CacheEvict(value = ["lessonsByTheme"], allEntries = true)
+    ])
     fun deleteLessonBlockById(id: Int): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         lessonBlocksRepository.findById(id).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Не удалось найти блок страницы")
         }
-        try {
-            lessonBlocksRepository.deleteById(id)
-            return PostResponse("Блок страницы успешно удалён")
-        } catch (_: Exception) {
-            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Не удалось удалить блок урока")
-        }
+        lessonBlocksRepository.deleteById(id)
+        return PostResponse("Блок страницы успешно удалён")
     }
 
     @Transactional
+    @CacheEvict(value = ["themes"], key = "#id")
     fun updateTheme(dto: AddThemeDto, id: Int): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         val theme = themeRepository.findById(id).orElseThrow {
@@ -178,8 +170,12 @@ class EducationService(
     }
 
     @Transactional
+    @Caching(evict = [
+        CacheEvict(value = ["lessons"], allEntries = true),
+        CacheEvict(value = ["lessonsByTheme"], allEntries = true)
+    ])
     fun updateLesson(dto: UpdateLessonDto, id: Int): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         val lesson = lessonsRepository.findById(id).orElseThrow {
@@ -194,8 +190,12 @@ class EducationService(
     }
 
     @Transactional
+    @Caching(evict = [
+        CacheEvict(value = ["lessons"], allEntries = true),
+        CacheEvict(value = ["lessonsByTheme"], allEntries = true)
+    ])
     fun updateBlock(dto: UpdateLessonBlockDto, id: Int): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         val block = lessonBlocksRepository.findById(id).orElseThrow {
@@ -210,9 +210,10 @@ class EducationService(
         }
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
+    @Cacheable(value = ["lessonsByTheme"], key = "#id")
     fun getLessonByTheme(id: Int): List<LessonsByPageResponseDto> {
-        val lessons = lessonsRepository.getAllByThemeId(id)
+        val lessons = lessonsRepository.findAllByThemeId(id)
         if (lessons.isEmpty()) {
             return emptyList()
         }
@@ -226,41 +227,41 @@ class EducationService(
         }
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
+    @Cacheable(value = ["lessons"], key = "#id")
     fun getLessonById(id: Int): LessonResponseDto {
-        val lesson = lessonsRepository.findById(id).orElseThrow {
-            ResponseStatusException(HttpStatus.NOT_FOUND, "Урок не найден")
-        }
 
-        val pages = lessonPagesRepository.getAllByLessonId(lesson.id!!).map { page ->
-            val blocks = lessonBlocksRepository.getAllByPageId(page.id!!).map { block ->
+        val lesson = lessonsRepository.findByIdWithPagesAndBlocks(id) ?:
+           throw ResponseStatusException(HttpStatus.NOT_FOUND, "Урок не найден")
+
+        val pageResponses = lesson.pages.map { page ->
+            val blocks = page.blocks.map { block ->
                 LessonBlockResponseDto(
                     id = block.id!!,
                     blockType = block.blockType,
                     orderIndex = block.orderIndex,
-                    payload = objectMapper.readTree(block.payload),
+                    payload = objectMapper.readTree(block.payload)
                 )
             }
-
-            LessonPageResponseDto(
-                id = page.id!!,
-                blocks = blocks,
-                orderIndex = page.orderIndex,
-            )
+            LessonPageResponseDto(id = page.id!!, blocks = blocks, orderIndex = page.orderIndex)
         }
 
         return LessonResponseDto(
             id = lesson.id!!,
             title = lesson.name,
             description = lesson.description,
-            pages = pages,
+            pages = pageResponses,
             themeId = lesson.theme.id!!,
         )
     }
 
     @Transactional
+    @Caching(evict = [
+        CacheEvict(value = ["lessons"], allEntries = true),
+        CacheEvict(value = ["lessonsByTheme"], allEntries = true)
+    ])
     fun addLesson(dto: AddLessonDto): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         val theme = themeRepository.findById(dto.theme).orElseThrow {
@@ -279,8 +280,12 @@ class EducationService(
     }
 
     @Transactional
+    @Caching(evict = [
+        CacheEvict(value = ["lessons"], allEntries = true),
+        CacheEvict(value = ["lessonsByTheme"], allEntries = true)
+    ])
     fun addLessonPage(dto: AddLessonPageDto): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         val lesson = lessonsRepository.findById(dto.lessonId).orElseThrow {
@@ -297,8 +302,12 @@ class EducationService(
     }
 
     @Transactional
+    @Caching(evict = [
+        CacheEvict(value = ["lessons"], allEntries = true),
+        CacheEvict(value = ["lessonsByTheme"], allEntries = true)
+    ])
     fun addLessonBlock(dto: AddLessonBlockDto): PostResponse {
-        if (appMode == "release") {
+        if (isProduction) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ к этой функции запрещён")
         }
         val page = lessonPagesRepository.findById(dto.lessonPageId).orElseThrow {

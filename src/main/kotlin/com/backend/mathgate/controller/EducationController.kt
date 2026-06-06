@@ -7,6 +7,7 @@ import com.backend.mathgate.dto.AddThemeDto
 import com.backend.mathgate.dto.LessonResponseDto
 import com.backend.mathgate.dto.LessonsByPageResponseDto
 import com.backend.mathgate.dto.PostResponse
+import com.backend.mathgate.dto.ThemeResponseDto
 import com.backend.mathgate.dto.UpdateLessonBlockDto
 import com.backend.mathgate.dto.UpdateLessonDto
 import com.backend.mathgate.entities.ThemeEntity
@@ -28,12 +29,12 @@ class EducationController(
     private val educationService: EducationService
 ) {
     @GetMapping("themes")
-    fun getAllThemes(): List<ThemeEntity> {
+    fun getAllThemes(): List<ThemeResponseDto> {
         return educationService.getAllThemes()
     }
 
     @GetMapping("themes/grade/{grade}")
-    fun getByGrade(@PathVariable grade: Int): List<ThemeEntity> {
+    fun getByGrade(@PathVariable grade: Int): List<ThemeResponseDto> {
         return educationService.getThemesByGrade(grade)
     }
 
@@ -83,7 +84,7 @@ class EducationController(
     }
 
     @DeleteMapping("page/delete/{id}")
-    fun updatePage(@PathVariable id: Int): PostResponse {
+    fun deletePage(@PathVariable id: Int): PostResponse {
         return educationService.deletePageById(id)
     }
 

@@ -8,9 +8,9 @@ import com.backend.mathgate.entities.BlockEntity
 import com.backend.mathgate.entities.QuestionEntity
 import com.backend.mathgate.repositories.BlockRepository
 import com.backend.mathgate.repositories.QuestionRepository
-import jakarta.transaction.Transactional
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
 
 @Service
@@ -19,7 +19,7 @@ class OgeService(
     private val blockRepository: BlockRepository,
 ) {
 
-    @Transactional
+    @Transactional(readOnly = true)
     fun getQuestion(): QuestionDto {
         val randomQuestion = questionRepository.findRandomQuestion()
 

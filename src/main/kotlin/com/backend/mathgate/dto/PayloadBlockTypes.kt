@@ -1,5 +1,6 @@
 package com.backend.mathgate.dto
 
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Size
@@ -32,4 +33,6 @@ data class ChoiceQuestionPayloadType(
     val question: String,
     @field:NotEmpty @field:Size(min = 2)
     val answers: List<String>,
+    @field:Min(0)
+    val correctAnswerIndex: Int,
 )
