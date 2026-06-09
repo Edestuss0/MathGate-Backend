@@ -9,6 +9,7 @@ import com.backend.mathgate.dto.LessonPageResponseDto
 import com.backend.mathgate.dto.LessonResponseDto
 import com.backend.mathgate.dto.LessonsByPageResponseDto
 import com.backend.mathgate.dto.PostResponse
+import com.backend.mathgate.dto.ThemeFullResponseDto
 import com.backend.mathgate.dto.ThemeResponseDto
 import com.backend.mathgate.dto.UpdateLessonBlockDto
 import com.backend.mathgate.dto.UpdateLessonDto
@@ -42,6 +43,50 @@ class EducationService(
     private val objectMapper: ObjectMapper,
     @Value("\${IS_PRODUCTION:false}") private val isProduction: Boolean
 ) {
+
+    @Transactional(readOnly = true)
+    fun getFullThemesByGrade(grade: Int): List<ThemeFullResponseDto> {
+        val themes = themeRepository.getByGradeWithLessons(grade)
+
+        val lessonIds = themes.flatMap { it.lessons }.map { it.id!! }
+        val lessonsWithPages = if (lessonIds.isNotEmpty()) {
+            lessonsRepository.findByIdsWithPagesAndBlocks(lessonIds).associateBy { it.id }
+        } else {
+            emptyMap()
+        }
+
+        return themes.map { theme ->
+            ThemeFullResponseDto(
+                id = theme.id!!,
+                name = theme.name,
+                grade = theme.grade,
+                lessons = theme.lessons.map { lessonRef ->
+                    val lesson = lessonsWithPages[lessonRef.id] ?: lessonRef
+                    LessonResponseDto(
+                        id = lesson.id!!,
+                        title = lesson.name,
+                        description = lesson.description,
+                        themeId = theme.id!!,
+                        pages = lesson.pages.map { page ->
+                            LessonPageResponseDto(
+                                id = page.id!!,
+                                orderIndex = page.orderIndex,
+                                blocks = page.blocks.map { block ->
+                                    LessonBlockResponseDto(
+                                        id = block.id!!,
+                                        blockType = block.blockType,
+                                        orderIndex = block.orderIndex,
+                                        payload = objectMapper.readTree(block.payload)
+                                    )
+                                }
+                            )
+                        }
+                    )
+                }
+            )
+        }
+    }
+
     @Transactional(readOnly = true)
     @Cacheable(value = ["themes"])
     fun getAllThemes(): List<ThemeResponseDto> {

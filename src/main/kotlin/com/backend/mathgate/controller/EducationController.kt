@@ -7,10 +7,10 @@ import com.backend.mathgate.dto.AddThemeDto
 import com.backend.mathgate.dto.LessonResponseDto
 import com.backend.mathgate.dto.LessonsByPageResponseDto
 import com.backend.mathgate.dto.PostResponse
+import com.backend.mathgate.dto.ThemeFullResponseDto
 import com.backend.mathgate.dto.ThemeResponseDto
 import com.backend.mathgate.dto.UpdateLessonBlockDto
 import com.backend.mathgate.dto.UpdateLessonDto
-import com.backend.mathgate.entities.ThemeEntity
 import com.backend.mathgate.services.EducationService
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.CrossOrigin
@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -36,6 +37,11 @@ class EducationController(
     @GetMapping("themes/grade/{grade}")
     fun getByGrade(@PathVariable grade: Int): List<ThemeResponseDto> {
         return educationService.getThemesByGrade(grade)
+    }
+
+    @GetMapping("themes/grade/{grade}/download")
+    fun downloadThemesByGrade(@PathVariable grade: Int): List<ThemeFullResponseDto> {
+        return educationService.getFullThemesByGrade(grade)
     }
 
     @PostMapping("theme/add")
